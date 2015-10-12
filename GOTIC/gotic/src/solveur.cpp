@@ -1,6 +1,7 @@
 #include "gotic.h"
 #include <ilcplex/ilocplex.h>
 // #include <cmath> 
+#include <limits> 
 
 
 typedef IloArray<IloBoolArray>    BoolMatrix;
@@ -308,7 +309,6 @@ int solve_frontal (Data & data, Solution & sol)
       for (int i = 0; i < nb_places ; ++i) { 
         IloExpr sumOverFst(env,0);
         var_sum(&sumOverFst,x_wi,true,i,nb_workers,false);
-
         model.add(sumOverFst >= 1);
       }
 
@@ -391,23 +391,9 @@ int solve_frontal (Data & data, Solution & sol)
         bool continu = false;
 
         // Departure
-        for (int i = 0; i < nb_places ; ++i)
-        if (cplex.getValue(f_wi[w][i]) == 1) {
-          std::cout << "The worker " << w << " is starting the task " << i 
-            << " at time : " << cplex.getValue(t_i[i]) << std::endl;
-          sol.add_job_safe(w,i,cplex.getValue(t_i[i]));
-          continu = true;
-          position =i;
-          break;
-        }
-
-        // Iteration
-        while (continu) {
-          continu = false;
-          for (int i = 0; i < nb_places ; ++i)
-          if (i != position)
-          if (cplex.getValue(n_wij[w][position][i]) == 1) {
-            std::cout << "The worker " << w << " is then doing the task " << i 
+        for (int i = 0; i < nb_places ; ++i) {
+          if (cplex.getValue(f_wi[w][i]) > 0.5) {
+            std::cout << "The worker " << w << " is starting the task " << i 
               << " at time : " << cplex.getValue(t_i[i]) << std::endl;
             sol.add_job_safe(w,i,cplex.getValue(t_i[i]));
             continu = true;
@@ -415,8 +401,36 @@ int solve_frontal (Data & data, Solution & sol)
             break;
           }
         }
+        // Iteration
+        while (continu) {
+          continu = false;
+          for (int i = 0; i < nb_places ; ++i)
+          if (i != position) {
+            if (cplex.getValue(n_wij[w][position][i]) > 0.5) {
+              std::cout << "The worker " << w << " is then doing the task " << i 
+                << " at time : " << cplex.getValue(t_i[i]) << std::endl;
+              sol.add_job_safe(w,i,cplex.getValue(t_i[i]));
+              continu = true;
+              position =i;
+              break;
+            }
+          }
+        }
       }
       
+      // for (int w = 0; w < nb_workers ; ++w)
+      // for (int i = 0; i < nb_places ; ++i) { 
+      //   std::cout << "f_wi(" << w << "," << i << ") = " << cplex.getValue(f_wi[w][i]) << std::endl;
+      //   std::cout << "l_wi(" << w << "," << i << ") = " << cplex.getValue(l_wi[w][i]) << std::endl;
+
+      //   for (int j = 0; j < nb_places ; ++j) { 
+      //     if (i !=j ) 
+      //       std::cout << "n_wij(" << w << "," << i << "," << j << ") = " << cplex.getValue(n_wij[w][i][j]) << " || ";
+      //   }
+      //   std::cout << std::endl;
+      // }
+
+
       std::cout << std::endl << "Are the job done : " << sol.are_jobs_done() << std::endl;
       std::cout << std::endl << "Cost of the solution : " << sol.compute_cost() << std::endl;
 
@@ -700,54 +714,82 @@ double d(
 
 int solve_lagrangian (Data & data, Solution & sol)
 {
-    IloEnv       env;
+  IloEnv       env;
 #ifdef NVERBOSE
-    env.setOut (env.getNullStream ());   // no output on screen
+  env.setOut (env.getNullStream ());   // no output on screen
 #endif        
 
-    std::vector<double> lambda(data.get_jmax(),-1000.0);
-    lambda[0] = 1500;
-    lambda[1] = 400;
-    lambda[2] = 1500;
-    lambda[3] = 250;
-    lambda[4] = 350;
-    lambda[5] = 750;
-    lambda[6] = 1000;
+  // lambda[0] = 1500;
+  // lambda[1] = 400;
+  // lambda[2] = 1500;
+  // lambda[3] = 250;
+  // lambda[4] = 350;
+  // lambda[5] = 750;
+  // lambda[6] = 1000;
 
-    // lambda[0] = 1500;
-    // lambda[1] = 400;
-    // lambda[2] = 1500;
-    // lambda[3] = 250;
-    // lambda[4] = 350;
-    // lambda[5] = 750;
-    // lambda[6] = 1000;
+  /** FIND AN ESTIMATION OF RHO_0 */
 
+  int k = 0;
+  double rho = 1000.0;
+  double epsilon = 0.001;
+  double nb_max_iteration = 1000;
+  std::vector<double> lambda(data.get_jmax(),rho);
+  double diff = std::numeric_limits<double>::max();
+  double val_opt_k = std::numeric_limits<double>::max();
+  double val_opt_km1;
+  /** ALGORITHME DE DECENTE DE GRADIENT */
+
+  while (diff > epsilon && k < nb_max_iteration) {
+    val_opt_km1 = val_opt_k;
+
+    /** Computation of the solution */
     std::vector<int> xres_i(data.get_jmax(),0);
-    double val_opt = 0;
+    val_opt_k = 0;
     for (int w = 0; w < data.get_wmax() ; ++w)
-      val_opt += d(
+      val_opt_k += d(
         &env,
         lambda,
         &data,
         &sol,
         &xres_i,
         w,
-        true);
+        false);
+
+    for (int i = 0; i < data.get_jmax() ; ++i) {
+      lambda[i] = lambda[i] - rho/(k+1)*(xres_i[i]-1);
+      if (lambda[i] < 0)
+        lambda[i] = 0;
+    }
+    diff = std::abs(val_opt_k - val_opt_km1);
+
+    k++;
+
 
     std::cout << std::endl << std::endl 
       << "Value of the optimiation program : "
-      << val_opt  << std::endl;
+      << val_opt_k  << std::endl;
 
+    std::cout << std::endl;
+    for (int i = 0; i < data.get_jmax() ; ++i) {
+      std::cout << "x(" << i << ") = " << xres_i.at(i) << std::endl;
+    }
 
-  std::cout << std::endl;
-  for (int i = 0; i < data.get_jmax() ; ++i) {
-    std::cout << "x(" << i << ") = " << xres_i.at(i) << std::endl;
+    std::cout << std::endl;
+    for (int i = 0; i < data.get_jmax() ; ++i) {
+      std::cout << "lambda(" << i << ") = " << lambda.at(i) << std::endl;
+    }
   }
 
-  std::cout << std::endl;
-  for (int i = 0; i < data.get_jmax() ; ++i) {
-    std::cout << "lambda(" << i << ") = " << lambda.at(i) << std::endl;
-  }
+  std::vector<int> xres_i(data.get_jmax(),0);
+  for (int w = 0; w < data.get_wmax() ; ++w)
+    val_opt_k += d(
+      &env,
+      lambda,
+      &data,
+      &sol,
+      &xres_i,
+      w,
+      true);
 
   std::cout << std::endl << "Are the job done : " << sol.are_jobs_done() << std::endl;
   std::cout << std::endl << "Cost of the solution : " << sol.compute_cost() << std::endl;
@@ -758,7 +800,5 @@ int solve_lagrangian (Data & data, Solution & sol)
   sol.print_detail      (std::cout);
   // sol.read_and_validate (std::string inc_filename);
 
-
-
-    return 1;
+  return 1;
 }
