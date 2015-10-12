@@ -1,0 +1,12 @@
+#                        name    w   j   s   v
+instance                 tiny    1   1   3  80
+
+#         id   x   y     Ts    Te   skills
+tic   tic_00  84  39    480   1080  1 2
+# tic   tic_01  19  33    480   1080  1 
+
+#          id    x   y   tmin   tmax    s    d   r      p
+# job   job_000   47  62   660    1079    2   60   1   1000
+job   job_001   95  91   840    1019    2   60   1   1000
+
+end
