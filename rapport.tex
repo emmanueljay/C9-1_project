@@ -1,0 +1,146 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Thin Sectioned Essay
+% LaTeX Template
+% Version 1.0 (3/8/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original Author:
+% Nicolas Diaz (nsdiaz@uc.cl) with extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+% PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[a4paper, 11pt]{article} % Font size (can be 10pt, 11pt or 12pt) and paper size (remove a4paper for US letter paper)
+
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage[utf8]{inputenc}  
+\usepackage{graphicx} % Required for including pictures
+\usepackage{wrapfig} % Allows in-line images
+\usepackage[a4paper, margin={3cm, 3cm}]{geometry}
+
+\usepackage{mathenv}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{setspace}
+\usepackage{bbm}
+\usepackage{bm}
+\usepackage{layout}
+\usepackage[]{algorithm2e}
+
+\usepackage{mathpazo} % Use the Palatino font
+\usepackage[T1]{fontenc} % Required for accented characters
+\linespread{1.05} % Change line spacing here, Palatino benefits from a slight increase by default
+
+\usepackage{listings} % Pour ajouter du code
+\usepackage{xcolor}
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+
+\makeatletter
+\renewcommand\@biblabel[1]{\textbf{#1.}} % Change the square brackets for each bibliography item from '[1]' to '1.'
+\renewcommand{\@listI}{\itemsep=0pt} % Reduce the space between items in the itemize and enumerate environments and the bibliography
+
+\renewcommand{\maketitle}{ % Customize the title - do not edit title and author name here, see the TITLE block below
+\begin{flushright} % Right align
+{\LARGE\@title} % Increase the font size of the title
+
+\vspace{30pt} % Some vertical space between the title and author name
+
+{\large\@author} % Author name
+\\\@date % Date
+
+\vspace{20pt} % Some vertical space between the author block and abstract
+\end{flushright}
+}
+
+%----------------------------------------------------------------------------------------
+% TITLE
+%----------------------------------------------------------------------------------------
+
+\title{\textbf{Modélisation projet C9-1}\\ % Title
+GOTIC} % Subtitle
+
+\author{\textsc{Dufour Maxime, Jay Emmanuel} % Author
+\\{\textit{ENSTA ParisTech}}} % Institution
+
+\date{\today} % Date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\vspace{200pt}
+
+\maketitle % Print the title section
+
+\section{Approche par relaxation lagrangienne}
+
+\subsection*{QUESTION 3}
+
+\paragraph*{}
+$F$ la fonction de coût peut être écrite sous cettte forme :
+$$ F(n,f,l) = \sum_{w \in W} \sum_{i \in J} d_B(w,i)(f_i^w + l_i^w)
+            + \sum_{i,j\; / \;j \ne i} d_L(i,j)(\sum_{w \in W} n_{i,j}^w) $$ 
+La contrainte qu'on relache est :
+$$ \sum_{w \in W} x_i^w >= 1 \qquad \forall i \in J $$
+On en déduit que le pseudo-lagrangien qu'on doit maintenant minimiser est :
+$$ L(\lambda,n,f,l,x) = F(n,f,l) + <\lambda,\sum_{w \in W} x^w - 1> $$
+Et la fonction duale associée :
+$$ d(\lambda) = \inf_{n,f,l,x} {L(\lambda,n,f,l,x) } $$ 
+sous le reste des contraintes.
+
+\paragraph*{}
+On peut donc écrire le pseudo-lagrangien sous la forme : 
+$$ L(\lambda,n,f,l,x) = \sum_{w \in W} (\sum_{i \in J} d_B(w,i)(f_i^w + l_i^w)
+            + \sum_{i,j\; / \;j \ne i} d_L(i,j) n_{i,j}^w + \sum_{i \in J} \lambda_i(x^w_i-\frac{1}{|W|}) ) $$
+Ou l'on identifie le lagrangien par technicien : 
+$$ l^w(n,f,l,x,\lambda) = \sum_{i \in J} d_B(w,i)(f_i^w + l_i^w)
+            + \sum_{i,j\; / \;j \ne i} d_L(i,j) n_{i,j}^w + \sum_{i \in J} \lambda_i(x^w_i-\frac{1}{|W|}) $$
+Qu'on doit minimiser pour tout lambda, étant tous indépendants, comme les contraintes restantes ne lient pas les différents techniciens.
+
+\subsection*{QUESTION 4}
+
+\paragraph*{}
+On doit donc résoudre le problème suivant :
+$$ \max_{\lambda} \sum_{w \in W} \min_{n^w,f^w,l^w,x^w} \{ l^w(n^w,f^w,l^w,x^w,\lambda)  \;\; / \; Contraintes \; non \; relachées \; \} $$
+Et donc on en déduit qu'un sur-gradient de cette fonction au point $\lambda$ est, avec $X_0 = (n_0, f_0, l_0, x_0)$ optimaux :
+$$ g(X_0) = \sum_{w \in W} x_0^w - 1 $$
+
+
+\subsection*{QUESTION 5}
+
+\paragraph*{}
+% https://en.wikibooks.org/wiki/LaTeX/Algorithms
+\begin{algorithm}[H]
+ \KwData{Toutes les données précédentes}
+ \KwResult{$\lambda$ et $X$ solutions du problème principal}
+ initialisation : $k = 0$ et $\lambda^0 \in R_{+}^I $ \;
+ \While {La fonction duale n'est pas stabilisée : $|d(\lambda^{k-1})-d(\lambda^{k-2})| \geq \epsilon$}{
+  $d(\lambda^k) = 0$ \;
+  \For{Chaque technicien $w$} 
+    {On résout avec Cplex : $ d^w(\lambda^k) = \min l^w(n^w,f^w,l^w,x^w,\lambda^k)$
+    sous les contraintes non relachées.\;
+    $d(\lambda^k) += d^w(\lambda^k)$\;}
+  $\lambda^{k+1} := (\lambda^k + \rho^k(\sum_{w \in W} x^w - 1))^{+}$ \;
+  $k := k+1$ \;
+ }
+ \caption{Relaxation lagrangienne}
+\end{algorithm}
+
+
+
+
+\end{document}
+

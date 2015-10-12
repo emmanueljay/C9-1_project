@@ -1,0 +1,179 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Thin Sectioned Essay
+% LaTeX Template
+% Version 1.0 (3/8/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original Author:
+% Nicolas Diaz (nsdiaz@uc.cl) with extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+% PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[a4paper, 11pt]{article} % Font size (can be 10pt, 11pt or 12pt) and paper size (remove a4paper for US letter paper)
+
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage[utf8]{inputenc}  
+\usepackage{graphicx} % Required for including pictures
+\usepackage{wrapfig} % Allows in-line images
+\usepackage[a4paper, margin={3cm, 3cm}]{geometry}
+
+\usepackage{mathenv}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{setspace}
+\usepackage{bbm}
+\usepackage{bm}
+\usepackage{layout}
+
+\usepackage{mathpazo} % Use the Palatino font
+\usepackage[T1]{fontenc} % Required for accented characters
+\linespread{1.05} % Change line spacing here, Palatino benefits from a slight increase by default
+
+\usepackage{listings} % Pour ajouter du code
+\usepackage{xcolor}
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+
+\makeatletter
+\renewcommand\@biblabel[1]{\textbf{#1.}} % Change the square brackets for each bibliography item from '[1]' to '1.'
+\renewcommand{\@listI}{\itemsep=0pt} % Reduce the space between items in the itemize and enumerate environments and the bibliography
+
+\renewcommand{\maketitle}{ % Customize the title - do not edit title and author name here, see the TITLE block below
+\begin{flushright} % Right align
+{\LARGE\@title} % Increase the font size of the title
+
+\vspace{30pt} % Some vertical space between the title and author name
+
+{\large\@author} % Author name
+\\\@date % Date
+
+\vspace{20pt} % Some vertical space between the author block and abstract
+\end{flushright}
+}
+
+%----------------------------------------------------------------------------------------
+% TITLE
+%----------------------------------------------------------------------------------------
+
+\title{\textbf{Modélisation projet C9-1}\\ % Title
+GOTIC} % Subtitle
+
+\author{\textsc{Dufour Maxime, Jay Emmanuel} % Author
+\\{\textit{ENSTA ParisTech}}} % Institution
+
+\date{\today} % Date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\vspace{200pt}
+
+\maketitle % Print the title section
+
+\section{Rappel des notations}
+
+Nous rappelons quelques notations de l'énoncé pour simplifier l'écriture du modèle par la suite. On considère un technicien $\omega \in W$ devant réaliser des tâches $j \in J$ nécessitant des compétences $s \in S$.
+
+Chaque technicien $\omega \in W$ se déplace à la vitesse V constante et est caractérisé par:
+\begin{itemize}
+\item la position géographique $B_{\omega}$ de sa base
+\item un ensemble de compétences $S_{\omega} \subseteq S$
+\item les instants $T_{\omega}^{start}$ et $T_{\omega}^{end}$ de début et fin de journée
+\end{itemize}
+
+Chaque tâche $j \in J$ est caractérisée par 
+\begin{itemize}
+\item sa position géographique $ ( x_j , y_j ) $
+\item la compétence $S_j \in S$ pour la réaliser
+\item la durée $D_j$ de l'intervention
+\item une variable booléenne $r_j$ qui indique si oui ou non l'intervention se fait sur rendez-vous
+\item le créneau $[T_j^{min},T_j^{max}]$ donne l'intervalle de temps dans lequel l'intervention doit se dérouler (s'il n'y a pas de rendez-vous prévu pour la tâche $j$, l'intervalle sera simplement fixé à la durée d'une journée en amont de l'optimisation)
+\end{itemize}
+
+\section{Variables de décision}
+\subsection{}
+$$ u_{i,j}^{\omega} \in \{0,1\} $$
+$$ \forall i,j \in Bases \; and \; \forall \omega \in [|1,n|] $$
+Vaut 1 si le technicien $\omega$ va du lieu $i$ au lieu $j$, 0 sinon
+
+\subsection{}
+$$x_j^{\omega} \in \{0,1\} $$
+$$ \forall j \in Bases \; and \; \forall \omega \in [|1,n|] $$
+Vaut 1 si le technicien $\omega$ satisfait la demande de la maison $j$, 0 sinon
+
+\subsection{}
+$$ t_j^{\omega} \in [|0,T-1|] $$ 
+$$ \forall j \in Bases \; and \; \forall \omega \in [|1,n|] $$
+Vaut le temps auquel le technicien $\omega$ quitte la maison $j$
+
+\section{Liaison des variables}
+\subsection{}
+Assurer qu'il y ait effectivement un trajet allant vers la maison $j$ si le technicien $\omega$ satisfait la demande de cette maison :
+$$ \sum_{i=0}^{N} u_{i,j}^{\omega} = x_j^{\omega}  \qquad \forall j,\omega $$
+
+\subsection{}
+On fixe le temps de départ du technicien $\omega$ de la maison $j$ à zéro si ce technicien ne satisfait pas la demande de cette maison :
+$$ t_j^{\omega} <= T x_j^{\omega} \qquad \forall j,\omega $$
+
+\section{Fonction objectif}
+Notons $D = (d_{i,j})_{(i,j) \in J \cup W}$ la matrice des distance (arrondies à l'entier le plus proche) entre les différents lieux géographiques du problème (elle contient aussi bien les positions géographiques de toutes les tâches que celles de toutes les bases des différents techniciens). On calcule cette matrice une seule fois avant l'optimisation.
+
+La fonction objectif s'écrit donc :
+
+\[ F = \sum_{\omega \in W} \sum_{ i \in J \cup W} \sum_{ j \in J \cup W} d_{ij} u_{ij}^{\omega} \]
+
+
+\section{Contraintes}
+\subsection{}
+Continuité du trajet d'un technicien (ce qui rentre est égal a ce qui sort) :
+$$  \sum_{ i \in J} u_{i,j}^{\omega} = \sum_{ k \in J} u_{j,k}^{\omega} \qquad \forall j,\omega $$
+
+\subsection{}
+Un technicien $\omega$ ne peut réaliser la tâche $j$ que s'il dispose de la compétence nécessaire (i.e. $s_j \in S_{\omega}$ )
+$$ x_j^{\omega}\prod_{i=0}^{|S_{\omega}|}(s_j - s^{\omega}(i)) = 0 \qquad \forall j \in J ,\omega$$
+
+\subsection{}
+Si le technicien $\omega$ reste suffisamment de temps pour faire la tâche nécessaire sur le lieu $j$ et chaque technicien doit avoir le temps d'aller d'un rendez-vous à l'autre
+$$ T(1-u_{i,j}^{\omega}) + t_j^{\omega} >= t_i^{\omega} + (\frac{d_{i,j}}{V} + D_j)u_{i,j}^{\omega} \qquad \forall i,j,\omega $$
+(Si le technicien ne va pas de $i$ à $j$, il n'y a pas de contraintes)
+
+\subsection{}
+Si il y a un rendez vous, arriver dans le bon créneau de temps pour le faire (quand il n'y en a pas on a préalablement fixé $T_j^{min}$ et $T_j^{max}$ aux bornes de la journée)
+$$ u_{i,j}^{\omega} T_j^{min} <= t_i^{\omega} + \frac{d_{i,j}}{V}u_{i,j}^{\omega} <= T_j^{max} +  T(1-u_{i,j}^{\omega}) \qquad \forall i,j,\omega $$
+
+\subsection{}
+Toutes les tâches doivent être effectuées
+$$ \sum_{\omega=0}^{\Omega} x_j^{\omega} = 1 \qquad \forall j$$
+
+\subsection{}
+Chaque technicien doit commencer et finir à sa base.
+Il doit partir de sa base une seule fois :
+$$ \sum_{j=0}^{N} u_{b(\omega),j}^{\omega} = 1 \qquad \forall \omega$$
+Il doit arriver à sa base une seule fois :
+$$ \sum_{i=0}^{N} u_{i,b(\omega)}^{\omega} = 1 \qquad \forall \omega$$
+Il doit partir de sa base en premier :
+$$ t_{b(\omega)}^{\omega} <=  t_j^{\omega} + (1-x_j^{\omega})T \qquad \forall j,\omega$$
+
+\subsection{}
+Chaque technicien doit commencer après $T_{\omega}^{start}$ 
+$$ T_{\omega}^{start} <=  t_{b(\omega)}^{\omega} \qquad \forall \omega$$
+et finir avant $T_{\omega}^{end}$
+$$  t_i^{\omega} + \frac{d_{i,b(\omega)}}{V}u_{i,b(\omega)}^{\omega} < T_{\omega}^{end} \qquad \forall i,\omega$$
+
+
+
+\end{document}
+
